@@ -15,6 +15,7 @@ setup(
     author_email="manuelnavarrogithub@gmail.com",
     python_requires=">=3.9",
     setup_requires=["setuptools_scm"],
+    url="https://github.com/ManuelNavarroGarcia/fsam/",
     install_requires=[
         "matplotlib",
         "numpy",
