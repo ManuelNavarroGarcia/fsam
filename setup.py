@@ -16,6 +16,7 @@ setup(
     python_requires=">=3.9",
     setup_requires=["setuptools_scm"],
     url="https://github.com/ManuelNavarroGarcia/fsam/",
+    download_url="https://github.com/ManuelNavarroGarcia/fsam/archive/refs/tags/0.1.0.tar.gz",
     install_requires=[
         "matplotlib",
         "numpy",
