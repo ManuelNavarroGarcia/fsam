@@ -119,7 +119,7 @@ patsy==0.5.3
     # via statsmodels
 pexpect==4.8.0
     # via ipython
-pillow==10.1.0
+pillow==10.2.0
     # via matplotlib
 pip-tools==7.3.0
     # via fsam (setup.py)
