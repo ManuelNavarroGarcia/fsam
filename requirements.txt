@@ -6,7 +6,7 @@
 #
 asttokens==2.4.1
     # via stack-data
-black==23.11.0
+black==24.3.0
     # via fsam (setup.py)
 build==1.0.3
     # via pip-tools
