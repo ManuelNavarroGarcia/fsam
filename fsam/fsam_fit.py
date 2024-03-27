@@ -18,10 +18,10 @@ from cpsplines.psplines.bspline_basis import BsplineBasis
 from cpsplines.psplines.penalty_matrix import PenaltyMatrix
 from gurobipy import GRB
 from scipy.linalg import block_diag
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
 from tqdm.auto import tqdm
 
@@ -192,7 +192,7 @@ class FSAM:
                 range(self.range_vars[self.m + i], self.range_vars[self.m + i + 1])
             )
             ds.append(self.ds[i])
-
+        # Compute the smoothing parameter
         output = sop_fit(
             y=y,
             X=add_constant(
@@ -201,9 +201,26 @@ class FSAM:
             Z=self.matrixS[:, list(itertools.chain(*range_nonlin))],
             G=ds,
         )
+
+        # Compute the AIC for the linear term
+        modelo = LinearRegression(fit_intercept=True)
+        modelo.fit(self.matrixS[:, list(itertools.chain(*range_lin))], y)
+        y_pred = modelo.predict(self.matrixS[:, list(itertools.chain(*range_lin))])
+
+        aic_lineal = np.sum(np.square(y - y_pred)) + 4
+
+        # Compute the AIC for the non-linear term (X is only the intercept)
+        output2 = sop_fit(
+            y=y,
+            X=np.ones((len(self.matrixS), 1)),
+            Z=self.matrixS[:, list(itertools.chain(*range_nonlin))],
+            G=ds,
+        )
+
         return {
             "sp": output["phi"] / output["tau"],
-            "aic": output["aic"],
+            "aic_nonlinear": output2["aic"],
+            "aic_lineal": aic_lineal,
             "edf": output["edf"],
         }
 
@@ -988,7 +1005,8 @@ class FSAM:
             .explode("sp")
             .astype(np.float32)
         )
-        nonlinear_aic = sp_aic["aic"].values
+        linear_aic = sp_aic["aic_lineal"].values
+        nonlinear_aic = sp_aic["aic_nonlinear"].values
         self.sp = sp_aic["sp"].values
         self.edf = sp_aic["edf"].values
 
@@ -1041,14 +1059,6 @@ class FSAM:
         init_sol = None
         evolution = {}
 
-        # Get correlations of the linear variables with the response variable for
-        # later possible discard.
-        linear_aic = np.array(
-            [
-                OLS(y, add_constant(X[:, i], has_constant="add")).fit().aic
-                for i in range(self.m)
-            ]
-        )
         self.aic = np.concatenate((linear_aic, nonlinear_aic))
 
         wait = 0
