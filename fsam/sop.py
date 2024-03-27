@@ -3,9 +3,6 @@ import logging
 from typing import Iterable, Optional, Union
 
 import numpy as np
-import pandas as pd
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
 
 
 def compute_deviance(
@@ -189,13 +186,9 @@ def sop_fit(
             "SOP algorithm has not converged."
             f"Convergence score is {np.abs(devold_ - dev)} while `tol` is {tol}."
         )
+    # Compute AICs: the deviance is the sum of squared residuals, and we penalize them
+    # with twice the effective degrees of freedom of the system
+    aic = 2 * ed.sum() + ssr
 
-    # Compute null model for AIC
-    mod_nul = smf.glm(
-        formula="y ~ 1", family=sm.families.Gaussian(), data=pd.Series(y)
-    ).fit()
-
-    # Compute AICs
-    aic = ssr - 2 * mod_nul.llf - mod_nul.null_deviance + 2 * len(theta)
     # `ed` gives the effective degrees of freedom of the non-linear tems
     return {"phi": phi, "tau": tau, "aic": aic, "edf": ed}
