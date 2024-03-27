@@ -1003,6 +1003,7 @@ class FSAM:
         sp_aic = (
             pd.DataFrame([self._get_sp(y=y, x_vars=[i]) for i in range(self.m)])
             .explode("sp")
+            .explode("edf")
             .astype(np.float32)
         )
         linear_aic = sp_aic["aic_lineal"].values
