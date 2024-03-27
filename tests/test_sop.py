@@ -1,28 +1,29 @@
 import numpy as np
 from statsmodels.tools import add_constant
 
-from fsam.sop import sop_fit
 from fsam.fsam_fit import FSAM
+from fsam.sop import sop_fit
 
 
 def test_sop():
     # This is the result obtained by saving the data and using the following
     # code from R:
     # sopfit <- sop(formula = y ~ f(x0, nseg = 10)
-    #                        + f(x1, nseg = 10)+ f(x2, nseg = 10),
+    #                        + f(x1, nseg = 10) + f(x2, nseg = 10),
     #            data = data,
     #            fit=TRUE)
     # print(sopfit$out$vc)
     exp_out = {
         "phi": 0.009877274,
         "tau": np.array([0.020848260, 0.014017075, 0.015953217]),
-        "aic": 118.42850728206221,
+        "aic": 74.21990047583813,
         "edf": np.array([3.825383, 3.438150, 3.473035]),
     }
     # And the expected output considering the smoothing parameters
     exp_out2 = {
         "sp": np.array([0.47376971, 0.70466014, 0.61913995]),
-        "aic": 118.42850728206221,
+        "aic_nonlinear": 68.2354979987828,
+        "aic_lineal": 12.637679533133062,
         "edf": np.array([3.825383, 3.438150, 3.473035]),
     }
     exp_y = np.array(
@@ -71,9 +72,7 @@ def test_sop():
     X = np.random.uniform(-1, 1, (n, m))
     y = np.sum(np.square(X), axis=1) + np.random.normal(0, 0.1, n)
 
-    var_sec = FSAM(
-        deg=[3] * m, ord_d=[2] * m, n_int=[10] * m, prediction=[{}] * m
-    )
+    var_sec = FSAM(deg=[3] * m, ord_d=[2] * m, n_int=[10] * m, prediction=[{}] * m)
     var_sec.fit(
         X,
         y,
