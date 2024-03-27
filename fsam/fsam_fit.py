@@ -193,7 +193,7 @@ class FSAM:
             )
             ds.append(self.ds[i])
         # Compute the smoothing parameter
-        output = sop_fit(
+        two_terms_output = sop_fit(
             y=y,
             X=add_constant(
                 self.matrixS[:, list(itertools.chain(*range_lin))], has_constant="add"
@@ -210,7 +210,7 @@ class FSAM:
         aic_lineal = np.sum(np.square(y - y_pred)) + 4
 
         # Compute the AIC for the non-linear term (X is only the intercept)
-        output2 = sop_fit(
+        non_linear_output = sop_fit(
             y=y,
             X=np.ones((len(self.matrixS), 1)),
             Z=self.matrixS[:, list(itertools.chain(*range_nonlin))],
@@ -218,10 +218,10 @@ class FSAM:
         )
 
         return {
-            "sp": output["phi"] / output["tau"],
-            "aic_nonlinear": output2["aic"],
+            "sp": two_terms_output["phi"] / two_terms_output["tau"],
+            "aic_nonlinear": non_linear_output["aic"],
             "aic_lineal": aic_lineal,
-            "edf": output["edf"],
+            "edf": two_terms_output["edf"],
         }
 
     def _complete_initial_solution(
