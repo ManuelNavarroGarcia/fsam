@@ -93,3 +93,37 @@ def test_sop():
         np.testing.assert_allclose(out2[key1], out2[key2], atol=1e-6)
 
     np.testing.assert_allclose(var_sec.predict(X).flatten(), exp_y, atol=1e-5)
+
+
+def test_aic():
+    exp_out1 = {
+        "sp": np.array([0.68142398]),
+        "aic_nonlinear": 13.783802977761706,
+        "aic_lineal": 23.808684000819937,
+        "edf": np.array([5.52920347]),
+    }
+    exp_out2 = {
+        "sp": np.array([10582.04339241]),
+        "aic_nonlinear": 22.035107106211456,
+        "aic_lineal": 6.094953570346078,
+        "edf": np.array([0.04291787]),
+    }
+
+    m, n = 1, 200
+    np.random.seed(0)
+    X = np.random.uniform(-1, 1, (n, m))
+    y1 = np.square(X).flatten() + np.random.normal(0, 0.1, n)
+    y2 = 0.5 * X.flatten() + np.random.normal(0, 0.1, n)
+
+    var_sec = FSAM(deg=[3] * m, ord_d=[2] * m, n_int=[10] * m, prediction=[{}] * m)
+    var_sec.m = m
+    _ = var_sec._get_bspline_bases(X=X)
+    S = var_sec._get_matrixS(X=X)
+    var_sec.matrixS = S
+
+    out1 = var_sec._get_sp(y=y1, x_vars=range(m))
+    out2 = var_sec._get_sp(y=y2, x_vars=range(m))
+
+    for exp_out, out in zip([exp_out1, exp_out2], [out1, out2]):
+        for key, value in exp_out.items():
+            np.testing.assert_allclose(value, out[key], atol=1e-5)
