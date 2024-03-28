@@ -4,10 +4,7 @@ import pytest
 from cpsplines.psplines.bspline_basis import BsplineBasis
 from gurobipy import GRB
 
-from fsam.fsam_fit import (
-    FSAM,
-    reparametrize_basis
-)
+from fsam.fsam_fit import FSAM, reparametrize_basis
 
 
 @pytest.fixture
