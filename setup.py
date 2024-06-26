@@ -7,7 +7,7 @@ README = (pathlib.Path(__file__).parent / "README.md").read_text()
 setup(
     name="fsam",
     license="MIT",
-    version="0.1.0",
+    version="0.1.1",
     packages=find_packages(),
     long_description=README,
     long_description_content_type="text/markdown",
@@ -16,7 +16,7 @@ setup(
     python_requires=">=3.9",
     setup_requires=["setuptools_scm"],
     url="https://github.com/ManuelNavarroGarcia/fsam/",
-    download_url="https://github.com/ManuelNavarroGarcia/fsam/archive/refs/tags/0.1.0.tar.gz",
+    download_url="https://github.com/ManuelNavarroGarcia/fsam/archive/refs/tags/0.1.1.tar.gz",
     install_requires=[
         "matplotlib",
         "numpy",
