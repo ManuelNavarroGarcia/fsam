@@ -576,29 +576,35 @@ class FSAM:
 
         # Build the SOS-1 (exclusivity) constraints on the coefficients and the
         # variables using the big-M previously calculated
+        use_bounds = False
         if compute_coef_bounds:
             # Compute the bounds for the coefficients. The first element is
             # discarded as it corresponds to the intercept, which is not estimated
-            coef_bounds = (
-                self._get_bounds(
-                    S_intercept,
-                    S_intercept.T @ S_intercept + pen_intercept,
-                    ub,
-                    y,
-                    False,
+            try:
+                coef_bounds = (
+                    self._get_bounds(
+                        S_intercept,
+                        S_intercept.T @ S_intercept + pen_intercept,
+                        ub,
+                        y,
+                        False,
+                    )
+                    .iloc[1:, :]
+                    .reset_index(drop=True)
                 )
-                .iloc[1:, :]
-                .reset_index(drop=True)
-            )
+                use_bounds = (
+                    True  # Set the flag to True if bounds computation is successful
+                )
+            except ValueError:
+                pass  # If an error occurs, use_bounds remains False
 
-            # Build the SOS-1 (exclusivity) constraints on the coefficients and the
-            # variables
-            for i, val in enumerate(dict_theta_.values()):
+        # Apply the constraints based on the use_bounds flag
+        for i, val in enumerate(dict_theta_.values()):
+            if use_bounds:
                 for v in val:
                     _ = M.addConstr(coef_bounds.loc[v, "lower"] * z[i] <= theta[v])
                     _ = M.addConstr(theta[v] <= coef_bounds.loc[v, "upper"] * z[i])
-        else:
-            for i, val in enumerate(dict_theta_.values()):
+            else:
                 _ = M.addLConstr(t[i] + z[i], "==", 1)
                 for v in val:
                     # It is needed to use `.tolist()` since `theta` is a `MVar`,
@@ -617,25 +623,43 @@ class FSAM:
             .values
         )
         if len(rows_restricted_idx) > 0:
-            # It is crucial to compute the bounds over the entire data set and
-            # then restrict them to the rows in `rows_restricted_idx`
-            # (otherwise, the results are not correct)
-            row_bounds = self._get_bounds(
-                S_intercept, S_intercept.T @ S_intercept + pen_intercept, ub, y, True
-            )
-            if np.abs(row_bounds.diff(1, 1).dropna(axis=1)).gt(BOUNDS_TOL).all().values:
-                _ = M.addMConstr(
-                    S[rows_restricted_idx, :],
-                    theta,
-                    GRB.GREATER_EQUAL,
-                    row_bounds.loc[rows_restricted_idx, "lower"].values - y.mean(),
+            # Initialize a flag to indicate whether to use row bounds or not
+            use_row_bounds = False
+            try:
+                # It is crucial to compute the bounds over the entire data set and then
+                # restrict them to the rows in `rows_restricted_idx` (otherwise, the
+                # results are not correct)
+                row_bounds = self._get_bounds(
+                    S_intercept,
+                    S_intercept.T @ S_intercept + pen_intercept,
+                    ub,
+                    y,
+                    True,
                 )
-                _ = M.addMConstr(
-                    S[rows_restricted_idx, :],
-                    theta,
-                    GRB.LESS_EQUAL,
-                    row_bounds.loc[rows_restricted_idx, "upper"].values - y.mean(),
+                use_row_bounds = (
+                    True  # Set the flag to True if bounds computation is successful
                 )
+            except ValueError:
+                pass  # If an error occurs, use_row_bounds remains False
+            if use_row_bounds:
+                if (
+                    np.abs(row_bounds.diff(1, 1).dropna(axis=1))
+                    .gt(BOUNDS_TOL)
+                    .all()
+                    .values
+                ):
+                    _ = M.addMConstr(
+                        S[rows_restricted_idx, :],
+                        theta,
+                        GRB.GREATER_EQUAL,
+                        row_bounds.loc[rows_restricted_idx, "lower"].values - y.mean(),
+                    )
+                    _ = M.addMConstr(
+                        S[rows_restricted_idx, :],
+                        theta,
+                        GRB.LESS_EQUAL,
+                        row_bounds.loc[rows_restricted_idx, "upper"].values - y.mean(),
+                    )
 
         # Construct the objective function
         obj = (
@@ -1035,22 +1059,25 @@ class FSAM:
                 [np.repeat(i, rep) for i, rep in enumerate(np.diff(self.range_vars))]
             )
             active_groups = np.where(self.edf >= self.conf_model["min_edf"])[0] + self.m
-            self.pgl_sols = get_solutions_pgl(
-                X=self._get_matrixS(X=X),
-                y=y,
-                X_val=self._get_matrixS(X=X_val) if train_size is not None else None,
-                y_val=y_val if train_size is not None else None,
-                K=K,
-                sp=self.sp,
-                groups=self.pgl_groups,
-                criterion=self.conf_model["criterion"],
-                max_iter=self.conf_model["n_iter_pgl"],
-                tol=self.conf_model["tol_pgl"],
-                n_alphas=self.conf_model["n_alphas"],
-                eps=self.conf_model["eps"],
-                ps_output=self.conf_model["ps_output"],
-                active_groups=active_groups,
-            )
+            try:
+                self.pgl_sols = get_solutions_pgl(
+                    X=self._get_matrixS(X=X),
+                    y=y,
+                    X_val=self._get_matrixS(X=X_val) if train_size is not None else None,
+                    y_val=y_val if train_size is not None else None,
+                    K=K,
+                    sp=self.sp,
+                    groups=self.pgl_groups,
+                    criterion=self.conf_model["criterion"],
+                    max_iter=self.conf_model["n_iter_pgl"],
+                    tol=self.conf_model["tol_pgl"],
+                    n_alphas=self.conf_model["n_alphas"],
+                    eps=self.conf_model["eps"],
+                    ps_output=self.conf_model["ps_output"],
+                    active_groups=active_groups,
+                )
+            except ValueError:
+                warm_start = False
             end_time = time.time()
             self.pgl_time = end_time - start_time
 
