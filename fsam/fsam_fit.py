@@ -18,10 +18,10 @@ from cpsplines.psplines.bspline_basis import BsplineBasis
 from cpsplines.psplines.penalty_matrix import PenaltyMatrix
 from gurobipy import GRB
 from scipy.linalg import block_diag
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
 from tqdm.auto import tqdm
 
@@ -192,8 +192,8 @@ class FSAM:
                 range(self.range_vars[self.m + i], self.range_vars[self.m + i + 1])
             )
             ds.append(self.ds[i])
-
-        output = sop_fit(
+        # Compute the smoothing parameter
+        two_terms_output = sop_fit(
             y=y,
             X=add_constant(
                 self.matrixS[:, list(itertools.chain(*range_lin))], has_constant="add"
@@ -201,10 +201,27 @@ class FSAM:
             Z=self.matrixS[:, list(itertools.chain(*range_nonlin))],
             G=ds,
         )
+
+        # Compute the AIC for the linear term
+        modelo = LinearRegression(fit_intercept=True)
+        modelo.fit(self.matrixS[:, list(itertools.chain(*range_lin))], y)
+        y_pred = modelo.predict(self.matrixS[:, list(itertools.chain(*range_lin))])
+
+        aic_lineal = np.sum(np.square(y - y_pred)) + 4
+
+        # Compute the AIC for the non-linear term (X is only the intercept)
+        non_linear_output = sop_fit(
+            y=y,
+            X=np.ones((len(self.matrixS), 1)),
+            Z=self.matrixS[:, list(itertools.chain(*range_nonlin))],
+            G=ds,
+        )
+
         return {
-            "sp": output["phi"] / output["tau"],
-            "aic": output["aic"],
-            "edf": output["edf"],
+            "sp": two_terms_output["phi"] / two_terms_output["tau"],
+            "aic_nonlinear": non_linear_output["aic"],
+            "aic_lineal": aic_lineal,
+            "edf": two_terms_output["edf"],
         }
 
     def _complete_initial_solution(
@@ -634,7 +651,7 @@ class FSAM:
         k: int,
         y: np.ndarray,
         init_sol: dict[str, Union[float, np.ndarray]],
-        warm_start: bool,
+        warm_start: Union[bool, dict[str, Any]],
         min_edf: int,
         compute_coef_bounds: bool,
         frac_row_bounds: float,
@@ -654,7 +671,8 @@ class FSAM:
             regression coefficients "theta" and objective function value "obj".
         warm_start : bool
             When set to True, completes an initial solution for the problem from
-            `init_sol` by adding variables to it.
+            `init_sol` by adding variables to it. When it is dictionary, it is assumed
+            that is in an input initial solution.
         min_edf : int
             The minimum effective degrees of freedom required so a non-linear
             term is not screened out.
@@ -699,13 +717,17 @@ class FSAM:
                 count_theta += p
 
         # Complete the initial solution if `warm_start` is True
-        if warm_start:
+        if isinstance(warm_start, bool) and warm_start:
             init_sol = self._complete_initial_solution(
                 dict_theta=dict_theta, k=k, y=y, init_sol=init_sol
             )
+        elif isinstance(warm_start, dict):
+            if isinstance(warm_start["z"], list):
+                warm_start["z"] = np.array(warm_start["z"], dtype=int)
+            init_sol = warm_start.copy()
         else:
             init_sol = {
-                "z": np.zeros((2 * self.m,)),
+                "z": np.zeros((2 * self.m,), dtype=int),
                 "theta": np.zeros((count_theta + 1,)),
                 "obj": 1e9,
             }
@@ -851,7 +873,7 @@ class FSAM:
         conf_model: Optional[dict[str, Any]] = None,
         train_size: Optional[Union[int, float]] = 0.7,
         random_state: int = 0,
-        warm_start: bool = True,
+        warm_start: Union[bool, dict[str, Any]] = True,
         scale_y: bool = False,
         compute_coef_bounds: bool = True,
         frac_row_bounds: float = 1.0,
@@ -910,10 +932,11 @@ class FSAM:
             Controls the shuffling applied to the data before applying the
             split. Pass an int for reproducible output across multiple function
             calls. By default 0
-        warm_start: bool, optional
+        warm_start: Union[bool, dict[str, Any]], optional
             When set to True, computes an initial solution for the problem,
             otherwise, just fit a whole new problem. The initial solution is
-            computed for each k. By default, True
+            computed for each k. When it is dictionary, it is assumed that is in an
+            input initial solution. By default, True
         scale_y: bool, optional
             When set to True, scales the response variable `y` to have zero mean
             and unit variance. By default, False
@@ -986,9 +1009,11 @@ class FSAM:
         sp_aic = (
             pd.DataFrame([self._get_sp(y=y, x_vars=[i]) for i in range(self.m)])
             .explode("sp")
+            .explode("edf")
             .astype(np.float32)
         )
-        nonlinear_aic = sp_aic["aic"].values
+        linear_aic = sp_aic["aic_lineal"].values
+        nonlinear_aic = sp_aic["aic_nonlinear"].values
         self.sp = sp_aic["sp"].values
         self.edf = sp_aic["edf"].values
 
@@ -1003,7 +1028,7 @@ class FSAM:
                 logging.warning("`max_iter` is set to 1.")
                 self.conf_model["max_iter"] = 1
 
-        if warm_start:
+        if isinstance(warm_start, bool) and warm_start:
             start_time = time.time()
             # Get group lasso initial solutions
             self.pgl_groups = np.concatenate(
@@ -1041,14 +1066,6 @@ class FSAM:
         init_sol = None
         evolution = {}
 
-        # Get correlations of the linear variables with the response variable for
-        # later possible discard.
-        linear_aic = np.array(
-            [
-                OLS(y, add_constant(X[:, i], has_constant="add")).fit().aic
-                for i in range(self.m)
-            ]
-        )
         self.aic = np.concatenate((linear_aic, nonlinear_aic))
 
         wait = 0
