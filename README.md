@@ -144,3 +144,9 @@ Guerrero](https://github.com/vanesaguerrero) and Professor [María
 Durbán](https://github.com/MariaDurban), whose insightful comments and
 invaluable expertise has given way to many of the current functionalities of the
 repository.
+
+This publication is part of the project/grant PDC2022-133359-I00 funded by MCIN/AEI/10.13039/501100011033 and by the European Union “NextGenerationEU/PRTR”.
+
+Esta publicación forma parte del proyecto PDC2022-133359-I00, financiado por MCIN/AEI/10.13039/501100011033 y por la Unión Europea “NextGenerationEU/PRTR”.
+
+![Acknowledgment](./img/project_funding.png)
