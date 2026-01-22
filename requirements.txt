@@ -212,7 +212,7 @@ tzdata==2023.3
     # via pandas
 wcwidth==0.2.10
     # via prompt-toolkit
-wheel==0.41.3
+wheel==0.46.2
     # via pip-tools
 widgetsnbextension==4.0.9
     # via ipywidgets
