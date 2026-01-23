@@ -35,7 +35,7 @@ exceptiongroup==1.1.3
     #   pytest
 executing==2.0.1
     # via stack-data
-fonttools==4.44.1
+fonttools==4.60.2
     # via matplotlib
 gurobipy==10.0.3
     # via fsam (setup.py)
