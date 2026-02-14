@@ -98,7 +98,7 @@ numpy==1.26.2
     #   scipy
     #   statsmodels
     #   tensorly
-packaging==23.2
+packaging==26.0
     # via
     #   black
     #   build
@@ -119,7 +119,7 @@ patsy==0.5.3
     # via statsmodels
 pexpect==4.8.0
     # via ipython
-pillow==10.3.0
+pillow==12.1.1
     # via matplotlib
 pip-tools==7.3.0
     # via fsam (setup.py)
