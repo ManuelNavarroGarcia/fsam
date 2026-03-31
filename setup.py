@@ -13,7 +13,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Manuel Navarro García",
     author_email="manuelnavarrogithub@gmail.com",
-    python_requires=">=3.9",
+    python_requires=">=3.12",
     setup_requires=["setuptools_scm"],
     url="https://github.com/ManuelNavarroGarcia/fsam/",
     download_url="https://github.com/ManuelNavarroGarcia/fsam/archive/refs/tags/0.1.1.tar.gz",
