@@ -137,7 +137,7 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.2
     # via stack-data
-pygments==2.16.1
+pygments==2.20.0
     # via ipython
 pyparsing==3.1.1
     # via matplotlib
