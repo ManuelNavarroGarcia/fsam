@@ -143,7 +143,7 @@ pyparsing==3.1.1
     # via matplotlib
 pyproject-hooks==1.0.0
     # via build
-pytest==7.4.3
+pytest==9.0.3
     # via fsam (setup.py)
 python-dateutil==2.8.2
     # via
